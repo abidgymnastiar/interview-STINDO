@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductServices;
@@ -20,45 +21,72 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $fields = ['id', 'name', 'price', 'stock', 'description', 'image'];
-        $products =$this->productServices->getAll($fields ?: ['*']);
+        $products = $this->productServices->getAll($fields);
         return response()->json(ProductResource::collection($products));
     }
 
     public function show($id)
-    { try {
-        $fields = ['id', 'name', 'price', 'stock', 'description', 'image'];
-        $product = $this->productServices->getById($id, $fields);
-        return response()->json(new ProductResource($product));
-        } catch(\Exception $e){
+    {
+        try {
+            $fields = ['id', 'name', 'price', 'stock', 'description', 'image'];
+            $product = $this->productServices->getById($id, $fields);
+            return response()->json(new ProductResource($product));
+        } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Product not found'], 404);
         }
     }
-    public function store(Request $request)
+
+    public function store(ProductRequest $request)
     {
-        $product = $this->productServices->create($request->validated());
+        $validatedData = $request->validated();
+
+        // Jika ada file gambar, simpan dan ambil path-nya
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $validatedData['image'] = $path;
+        }
+
+        $product = Product::create($validatedData);
+
         return response()->json(new ProductResource($product), 201);
     }
-    public function update(Request $request, $id)
-    { try {
-        $product = $this->productServices->update($id, $request->validated());
-        return response()->json(new ProductResource($product));
-    } catch (ModelNotFoundException $e) {
-        return response()->json(['error' => 'Product not found'], 404);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Failed to update product'], 500);
+
+    public function update(ProductRequest $request, $id)
+    {
+        try {
+            $validatedData = $request->validated();
+
+            // Jika ada file gambar baru, simpan ulang
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('products', 'public');
+                $validatedData['image'] = $path;
+            }
+
+            $product = $this->productServices->update($id, $validatedData);
+            return response()->json(new ProductResource($product));
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Product not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to update product'], 500);
+        }
     }
 
-    }
     public function destroy($id)
     {
-        $this->productServices->delete($id);
-        return response()->json(null, 204);
+        try {
+            $this->productServices->delete($id);
+            return response()->json(null, 204);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Product not found'], 404);
+        }
     }
+
     public function search(Request $request)
     {
         $query = $request->input('query', '');
-        $fields = ['id', 'name', 'price', 'stock', 'description', 'image'];
-        $products = $this->productServices->search($query, $fields ?: ['*']);
+
+        $products = Product::where('name', 'like', "%{$query}%")->get();
+
         return response()->json(ProductResource::collection($products));
     }
 }

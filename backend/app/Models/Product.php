@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Storage;
 
 class Product extends Model
 {
@@ -15,4 +16,18 @@ class Product extends Model
         'description',
         'image',
     ];
+
+       public function getImageAttribute()
+{
+    $filename = $this->attributes['image'] ?? null;
+
+    if ($filename && Storage::disk('public')->exists("product/$filename")) {
+        // Mengembalikan URL dari file di storage/app/public/product
+        return asset("storage/product/$filename");
+    }
+
+    // Fallback jika gambar tidak ditemukan
+    return 'https://api.dicebear.com/9.x/notionists/svg';
+}
+
 }

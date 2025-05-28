@@ -18,7 +18,7 @@ class ProductSeeder extends Seeder
             'price' => 10000,
             'stock' => 10,
             'description' => 'Deskripsi produk A',
-            'image' => 'produk-a.jpg'
+            'image' => 'produk-a.svg'
         ]);
 
         Product::create([
@@ -26,7 +26,7 @@ class ProductSeeder extends Seeder
             'price' => 20000,
             'stock' => 5,
             'description' => 'Deskripsi produk B',
-            'image' => 'produk-b.jpg'
+            'image' => 'produk-b.svg'
         ]);
     }
 }
