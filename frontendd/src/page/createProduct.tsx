@@ -1,138 +1,152 @@
 import { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { createProduct, uploadImage, type CreateProductInput } from "../lib/api";
+
+const BASE_URL = "http://127.0.0.1:8000/api/product";
+
+interface Product {
+  name: string;
+  price: number;
+  stock: number;
+  description: string;
+  image?: string;
+}
 
 export default function CreateProduct() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<CreateProductInput>({
+
+  const [product, setProduct] = useState<Product>({
     name: "",
     price: 0,
-    stock: undefined,
+    stock: 0,
     description: "",
-    image: "",
   });
+
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({
+
+    setProduct((prev) => ({
       ...prev,
       [name]: name === "price" || name === "stock" ? Number(value) : value,
     }));
-  };
+  }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (file) {
-      setImageFile(file);
-      setPreview(URL.createObjectURL(file));
-    } else {
-      setImageFile(null);
-      setPreview("");
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files.length > 0) {
+      setImageFile(e.target.files[0]);
     }
-  };
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      let imageUrl = form.image;
+      const formData = new FormData();
+
+      formData.append("name", product.name);
+      formData.append("price", product.price.toString());
+      formData.append("stock", product.stock.toString());
+      formData.append("description", product.description || "");
 
       if (imageFile) {
-        const formData = new FormData();
         formData.append("image", imageFile);
-        imageUrl = await uploadImage(formData); // fungsi ini mengembalikan URL dari server
       }
 
-      const newProduct: CreateProductInput = {
-        ...form,
-        image: imageUrl,
-      };
+      // Axios POST request langsung di sini
+      await axios.post(BASE_URL, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      await createProduct(newProduct);
-      setLoading(false);
+      alert("Produk berhasil dibuat");
       navigate("/");
     } catch (err) {
       console.error(err);
+      setError("Gagal membuat produk, coba lagi.");
+    } finally {
       setLoading(false);
-      setError("Gagal menyimpan produk, coba lagi.");
     }
-  };
+  }
 
   return (
-    <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Tambah Produk Baru</h1>
+    <form onSubmit={handleSubmit} className="p-4 max-w-lg mx-auto">
       {error && <p className="text-red-600 mb-4">{error}</p>}
-      <form onSubmit={handleSubmit} className="space-y-4">
+
+      <label className="block mb-2">
+        Nama Produk
         <input
           type="text"
           name="name"
-          placeholder="Nama Produk"
-          value={form.name}
+          value={product.name}
           onChange={handleChange}
+          className="border p-2 w-full rounded"
           required
-          className="w-full border px-3 py-2 rounded"
         />
+      </label>
+
+      <label className="block mb-2">
+        Harga (IDR)
         <input
           type="number"
           name="price"
-          placeholder="Harga"
-          value={form.price || ""}
+          value={product.price}
           onChange={handleChange}
-          required
-          className="w-full border px-3 py-2 rounded"
+          className="border p-2 w-full rounded"
           min={0}
+          required
         />
+      </label>
+
+      <label className="block mb-2">
+        Stok
         <input
           type="number"
           name="stock"
-          placeholder="Stok"
-          value={form.stock || ""}
+          value={product.stock}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          className="border p-2 w-full rounded"
           min={0}
+          required
         />
+      </label>
+
+      <label className="block mb-2">
+        Deskripsi
         <textarea
           name="description"
-          placeholder="Deskripsi"
-          value={form.description}
+          value={product.description}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          className="border p-2 w-full rounded"
+          rows={4}
         />
+      </label>
 
-        <div>
-          <label className="block mb-1 font-semibold">Upload Gambar</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full"
-          />
-        </div>
+      <label className="block mb-4">
+        Upload Gambar
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="border p-2 w-full rounded"
+          required
+        />
+      </label>
 
-        {preview && (
-          <img
-            src={preview}
-            alt="Preview"
-            className="mt-2 w-32 h-32 object-cover rounded"
-          />
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          {loading ? "Menyimpan..." : "Simpan Produk"}
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+      >
+        {loading ? "Menyimpan..." : "Simpan Produk"}
+      </button>
+    </form>
   );
 }

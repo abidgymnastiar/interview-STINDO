@@ -21,9 +21,9 @@ class Product extends Model
 {
     $filename = $this->attributes['image'] ?? null;
 
-    if ($filename && Storage::disk('public')->exists("product/$filename")) {
+    if ($filename && Storage::disk('public')->exists("products/$filename")) {
         // Mengembalikan URL dari file di storage/app/public/product
-        return asset("storage/product/$filename");
+        return asset("storage/products/$filename");
     }
 
     // Fallback jika gambar tidak ditemukan

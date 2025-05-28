@@ -6,6 +6,7 @@ use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductServices;
+use Illuminate\Container\Attributes\Storage;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
@@ -88,5 +89,21 @@ class ProductController extends Controller
         $products = Product::where('name', 'like', "%{$query}%")->get();
 
         return response()->json(ProductResource::collection($products));
+    }
+
+        public function uploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|max:2048',  // maksimal 2MB
+        ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $url = Storage::url($path);  // dapatkan URL akses file
+
+            return response()->json(['url' => $url], 201);
+        }
+
+        return response()->json(['error' => 'No image uploaded'], 400);
     }
 }
